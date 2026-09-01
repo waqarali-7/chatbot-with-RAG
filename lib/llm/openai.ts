@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { modelForRole } from '@/config/models';
 import type { ProviderId } from '@/config/models';
+import { recordUsage } from './budget';
 import { QuotaExhaustedError, withRetry } from './retry';
 import {
   ProviderError,
@@ -44,6 +45,7 @@ export class OpenAIProvider implements LLMProvider {
         stop: req.stopSequences,
         messages: this.messages(req),
       }));
+      recordUsage(this.id, res.usage?.prompt_tokens ?? 0, res.usage?.completion_tokens ?? 0);
       return {
         text: res.choices[0]?.message?.content ?? '',
         provider: 'openai',
@@ -100,6 +102,7 @@ export class OpenAIProvider implements LLMProvider {
       throw new ProviderError(`openai stream failed: ${String(err)}`, 'openai', err);
     }
 
+    recordUsage(this.id, promptTokens, completionTokens);
     yield {
       type: 'done',
       response: {

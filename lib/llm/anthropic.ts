@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { modelForRole } from '@/config/models';
 import type { ProviderId } from '@/config/models';
+import { recordUsage } from './budget';
 import { QuotaExhaustedError, withRetry } from './retry';
 import {
   ProviderError,
@@ -94,6 +95,7 @@ export class AnthropicProvider implements LLMProvider {
         .map((b) => b.text)
         .join('');
       const message = res as Anthropic.Message;
+      recordUsage(this.id, message.usage.input_tokens, message.usage.output_tokens);
       return {
         text,
         provider: 'anthropic',
@@ -144,6 +146,7 @@ export class AnthropicProvider implements LLMProvider {
       throw new ProviderError(`anthropic stream failed: ${String(err)}`, 'anthropic', err);
     }
 
+    recordUsage(this.id, promptTokens, completionTokens);
     yield {
       type: 'done',
       response: {

@@ -1,14 +1,9 @@
 {
-  "ranAt": "2026-09-01T13:35:23.166Z",
+  "ranAt": "2026-09-01T13:42:53.196Z",
   "mode": "enforce",
   "stack": "dense",
   "passed": false,
   "breaches": [
-    {
-      "metric": "goalCompletion",
-      "value": 0.6286,
-      "threshold": 0.8
-    },
     {
       "metric": "falseAbstention",
       "value": 0.125,

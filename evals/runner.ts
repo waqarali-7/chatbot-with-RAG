@@ -16,6 +16,8 @@ import path from 'node:path';
 import { isFullyOffline, judgeIsCrossFamily, providerForRole, type ProviderId } from '@/config/models';
 import { DISCLOSURE_MODES, type DisclosureMode } from '@/lib/agent/types';
 import { describeRouting } from '@/lib/llm/registry';
+import { BudgetExceededError } from '@/lib/llm/budget';
+import { spendReport, totalUsd } from '@/lib/llm/budget';
 import { QuotaExhaustedError } from '@/lib/llm/retry';
 import { backend } from '@/lib/rag/retrieve';
 import { evalConcurrency, mapLimit } from '@/lib/util/concurrency';
@@ -480,6 +482,9 @@ async function main() {
   }
   const prov = provenance();
   console.log(`concurrency: ${evalConcurrency()} (set EVAL_CONCURRENCY to change)`);
+  if (Number(process.env.EVAL_MAX_USD) > 0) {
+    console.log(`budget ceiling: $${Number(process.env.EVAL_MAX_USD).toFixed(2)} (run stops when crossed)`);
+  }
   console.log(
     `routing: ${Object.entries(prov.routing)
       .map(([r, v]) => `${r}=${v.provider}`)
@@ -537,11 +542,17 @@ async function main() {
     clock: read('clock'),
   };
   write('latest', latest);
+  console.log(`\nspend\n${spendReport()}`);
   console.log('\ndone');
 }
 
 if (process.argv[1]?.includes('runner')) {
   main().catch((e) => {
+    if (e instanceof BudgetExceededError || e?.name === 'BudgetExceededError') {
+      console.error(`\n${e.message}\n`);
+      console.error(`spend\n${spendReport()}`);
+      process.exit(3);
+    }
     if (e instanceof QuotaExhaustedError || e?.name === 'QuotaExhaustedError') {
       console.error(`\n${e.message}\n`);
       console.error('  Stages that completed before the limit have been written to evals/results/.');

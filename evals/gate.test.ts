@@ -47,9 +47,17 @@ const breaches: { metric: string; value: number | string; threshold: number | st
  * Assert, or record and continue. In report mode the breach still lands in
  * gate-status.json, so it reaches the scorecard either way.
  */
-/** A stage that did not run is outstanding, never a silent pass. */
+/**
+ * A stage that did not run is outstanding, never a silent pass. In enforce mode
+ * that fails the gate: a threshold nobody measured has not been met, and
+ * recording it while returning green is the exact failure this gate exists to
+ * prevent.
+ */
 function missingStage(metric: string) {
   breaches.push({ metric, value: 'stage not run', threshold: 'n/a' });
+  if (MODE === 'enforce') {
+    throw new Error(`${metric}: the stage that measures it did not run`);
+  }
 }
 
 function check(metric: string, value: number, threshold: number, ok: boolean) {

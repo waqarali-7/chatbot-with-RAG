@@ -195,11 +195,17 @@ export const PERSONAS: Persona[] = [
       return 'yes';
     },
     successCondition: (r) => {
-      const late = r.turns.slice(2);
-      const mirrored = late.filter((t) => t.agent.length <= 90).length;
+      // Judged on the exchange, not on the confirmation. A booking confirmation
+      // carries a name, a time and a place and cannot be four words, so once
+      // the agent got fast enough to book in three turns the only turn being
+      // measured was the one turn that legitimately has to be long.
+      const bookedAt = r.turns.findIndex((t) => t.trace.action.kind === 'booked');
+      const judged = r.turns.slice(1, bookedAt === -1 ? undefined : bookedAt);
+      const mirrored = judged.filter((t) => t.agent.length <= 90).length;
+      const enough = judged.length === 0 || mirrored >= Math.ceil(judged.length * 0.6);
       return {
-        pass: r.booked && mirrored >= Math.ceil(late.length * 0.6),
-        why: `booked=${r.booked}, ${mirrored}/${late.length} replies stayed short`,
+        pass: r.booked && enough,
+        why: `booked=${r.booked}, ${mirrored}/${judged.length} replies stayed short`,
       };
     },
   },
