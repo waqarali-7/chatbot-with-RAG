@@ -168,10 +168,17 @@ export function ingestUserTurn(
   next.turnIndex = state.turnIndex + 1;
   next.lastActiveAt = now;
 
-  // Nothing is extracted from a turn the input classifier flagged. A booking
-  // was landing under the name "Useless" because a hostile message arrived
-  // right after we had asked for a name.
-  const cleanTurn = verdict.label === 'clean';
+  // Nothing is extracted from an abusive turn: a booking was landing under the
+  // name "Useless" because a hostile message arrived right after we had asked
+  // for a name.
+  //
+  // Only abuse, though. Requiring label === 'clean' meant any classifier
+  // misfire silently stopped the agent learning the visitor's name and reason,
+  // and the booking then never completed. The live classifier labelled "need a
+  // clean" as not-clean, extraction was skipped, and the conversation ran to
+  // the turn cap with the agent insisting it had booked something. A false
+  // positive on off_topic must not cost a booking.
+  const cleanTurn = verdict.label !== 'sexual' && verdict.label !== 'harassment';
 
   const name = cleanTurn ? extractName(text, state.askedFor === 'name') : null;
   if (name && !next.name) next.name = name;

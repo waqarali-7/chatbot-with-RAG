@@ -66,7 +66,12 @@ const OVER_ACK = [
  */
 const ASK_TARGETS: [string, RegExp][] = [
   ['name', /\b(your name|who'?s it for|can i (take|grab|get) (your )?name|name\?)/i],
-  ['site', /\b(which (site|location|branch|one)|preferred (site|location)|docklands or|shoreditch or|clapham or|where would you|whereabouts)/i],
+  // Naming two sites alongside two times is one question ("which of these
+  // two?"), not two. "10am in Docklands or 11am in Shoreditch, does either
+  // work?" was being rejected as stacked, so the offer never reached the
+  // visitor and the booking could not proceed. Only explicit asking language
+  // counts as asking about a site.
+  ['site', /\b(which (site|location|branch)|preferred (site|location)|where would you|whereabouts|docklands or shoreditch\?|shoreditch or clapham\?)/i],
   ['reason', /\b(what'?s it for|what do you need|what are you (after|coming in)|reason for|what'?s the appointment for|what needs)/i],
   ['time', /\b(what time|which time|when (would|works|suits|are you)|\d{1,2}(:\d{2})?\s?[ap]m\b|morning or afternoon)/i],
 ];

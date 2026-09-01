@@ -101,7 +101,7 @@ export default function Chat({
             | { type: 'typing'; ms: number }
             | { type: 'bubble'; text: string }
             | { type: 'done'; state: ConversationState; closed: boolean }
-            | { type: 'error'; message: string };
+            | { type: 'error'; kind?: 'quota' | 'unknown'; message: string };
 
           if (event.type === 'typing') setTyping(true);
           else if (event.type === 'bubble') {
@@ -113,7 +113,10 @@ export default function Chat({
             state.current = event.state;
             if (event.closed) setClosed(true);
           } else if (event.type === 'error') {
-            setError('Something went wrong. Try again in a moment.');
+            setError(event.message);
+            // A quota failure will not fix itself on a retry, so stop inviting
+            // one. Anything else might, so leave the box open.
+            if (event.kind === 'quota') setClosed(true);
           }
         }
       }

@@ -168,3 +168,21 @@ export function Note({ children }: { children: ReactNode }) {
 
 export const pctFmt = (n: number | null | undefined, dp = 2) =>
   n === null || n === undefined ? '—' : n.toFixed(dp);
+
+/**
+ * A stage that did not run in this pass. Shown instead of the section, because
+ * leaving the last run's numbers in place would put results from two different
+ * systems on one page.
+ */
+export function NotRun({ stage, why }: { stage: string; why: string }) {
+  return (
+    <div className="border border-[var(--color-rule-strong)] px-4 py-4">
+      <p className="text-[14px] font-medium">Not run in this pass</p>
+      <p className="mt-2 max-w-[46rem] text-[13px] leading-[1.6] text-[var(--color-ink-soft)]">
+        {why} Nothing is shown rather than the previous run's figures: the other sections on this
+        page come from a different stack, and mixing them would make the whole page unreadable as
+        evidence. Re-run with <span className="tnum">pnpm eval:{stage}</span>.
+      </p>
+    </div>
+  );
+}

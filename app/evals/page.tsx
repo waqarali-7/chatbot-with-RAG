@@ -1,8 +1,21 @@
 import latest from '@/evals/results/latest.json';
+import gateStatus from '@/evals/results/gate-status.json';
 import { THRESHOLDS } from '@/evals/thresholds';
 import { DISCLOSURE } from '@/lib/agent/disclosure';
 import type { DisclosureMode } from '@/lib/agent/types';
-import { Expand, Note, Pending, Section, Status, Table, Td, Th, ThresholdBar, pctFmt } from './components';
+import {
+  Expand,
+  Note,
+  NotRun,
+  Pending,
+  Section,
+  Status,
+  Table,
+  Td,
+  Th,
+  ThresholdBar,
+  pctFmt,
+} from './components';
 
 export const metadata = { title: 'Scorecard — Meridian booking agent' };
 
@@ -16,6 +29,14 @@ const disclosure = R.disclosure;
 const providers = R.providers;
 const latency = R.latency;
 const clock = R.clock;
+
+const gate = gateStatus as {
+  mode: string;
+  stack: string;
+  passed: boolean;
+  ranAt: string;
+  breaches: { metric: string; value: number | string; threshold: number | string }[];
+};
 
 const denseRetrieval = rag?.backendKind === 'pgvector';
 const agentIsMock = prov?.routing?.agent?.provider === 'mock';
@@ -51,6 +72,29 @@ export default function EvalsPage() {
         </div>
       )}
 
+      {!gate.passed && (
+        <div className="mt-6 border-l-2 border-[var(--color-fail)] bg-[var(--color-fail-wash)] px-4 py-3">
+          <p className="text-[13px] font-medium text-[var(--color-fail)]">
+            This build shipped below {gate.breaches.length === 1 ? 'one of its' : `${gate.breaches.length} of its`}{' '}
+            own thresholds.
+          </p>
+          <p className="mt-1.5 max-w-[46rem] text-[13px] leading-[1.6] text-[var(--color-ink-soft)]">
+            The regression gate found {gate.breaches.length} breached threshold
+            {gate.breaches.length === 1 ? '' : 's'} and the deploy was allowed through with
+            <span className="tnum"> EVAL_GATE_MODE=report</span>. The bars are unchanged and the
+            numbers below are the real ones. Listing this here rather than quietly lowering the
+            threshold is the point: a scorecard that only ever shows passes is not a scorecard.
+          </p>
+          <ul className="mt-2.5 space-y-1">
+            {gate.breaches.map((b) => (
+              <li key={b.metric} className="tnum text-[13px] text-[var(--color-ink-soft)]">
+                {b.metric}: {b.value} against {b.threshold}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* ------------------------------------------------------------- hero */}
       <Section
         id="disclosure"
@@ -63,6 +107,12 @@ export default function EvalsPage() {
           </>
         }
       >
+        {!disclosure ? (
+          <NotRun
+            stage="disclosure"
+            why="The disclosure comparison runs the full conversation suite three times, once per mode."
+          />
+        ) : (
         <Table minWidth="46rem">
           <thead>
             <tr>
@@ -97,8 +147,9 @@ export default function EvalsPage() {
             ))}
           </tbody>
         </Table>
+        )}
 
-        {agentIsMock ? (
+        {disclosure && agentIsMock ? (
           <Note>
             <strong className="font-medium text-[var(--color-ink)]">
               This comparison is degenerate on this run and should not be read as a result.
@@ -109,13 +160,13 @@ export default function EvalsPage() {
             model serves the agent role. What a zero here demonstrates is determinism across modes,
             not indifference to disclosure.
           </Note>
-        ) : (
+        ) : disclosure ? (
           <Note>
             Booking completion is measured over the bookable personas only. The hostile,
             boundary-tester and no-availability personas are not expected to book, and folding them
             in would move this number for reasons that have nothing to do with disclosure.
           </Note>
-        )}
+        ) : null}
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           {(['minimal', 'info_card', 'explicit'] as DisclosureMode[]).map((m) => (
@@ -515,6 +566,12 @@ export default function EvalsPage() {
         title="Provider comparison"
         lede="The same suite against the agent role on both providers. For a buyer who already runs an agent on some model, this is the transferability question answered rather than asserted."
       >
+        {!providers ? (
+          <NotRun
+            stage="providers"
+            why="The provider comparison runs the conversation suite once per provider, 100 conversations in total."
+          />
+        ) : (
         <Table minWidth="46rem">
           <thead>
             <tr>
@@ -546,10 +603,14 @@ export default function EvalsPage() {
             ))}
           </tbody>
         </Table>
+        )}
       </Section>
 
       {/* ----------------------------------------------------------- latency */}
       <Section id="latency" title="Latency">
+        {!latency ? (
+          <NotRun stage="latency" why="Latency samples 20 conversations for time to first token and delivered delay." />
+        ) : (
         <div className="grid gap-6 sm:grid-cols-2">
           <Table minWidth="0">
             <thead>
@@ -604,8 +665,9 @@ export default function EvalsPage() {
               })}
             </div>
           </div>
+        <Note>{latency.note}</Note>
         </div>
-        <Note>{latency?.note}</Note>
+        )}
       </Section>
 
       {/* -------------------------------------------------------- clock rate */}

@@ -377,6 +377,54 @@ export function inventedTimes(text: string, availability: Slot[], offered: Slot[
     .map((m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
 }
 
+/**
+ * Words that frame the appointment as settled. Matched as stems against the
+ * whole reply rather than as fixed phrases.
+ *
+ * The first version of this enumerated phrasings — "you're booked", "booked you
+ * in", "that's you down" — and a real run walked straight past it with
+ * "Booked, Sam, tomorrow at 11am", "locking that in for you now", "you're
+ * already booked in" and "Sorted, Sam". Enumerating a model's phrasings does
+ * not work; this file has now learned that three times.
+ */
+/**
+ * Unambiguous on their own: nothing else in a booking conversation reads this
+ * way, so they do not need a time alongside them to be a confirmation.
+ */
+const SETTLED_STRONG =
+  /\b(you'?re (all )?(booked|set|confirmed|sorted|in)|booked you in|booking you in|that'?s (you )?(booked|confirmed|sorted|down)|all (booked|confirmed|sorted|set|good|done)|locked (that )?in|locking (that )?in|in the diary|see you (then|tomorrow|on|at)|nothing (more|else) (you|to|for you))\b/i;
+
+/**
+ * Ambiguous alone. "Sorted" or "that's down" could be about anything, so these
+ * only count as a confirmation when the reply also names a time or a day.
+ */
+const SETTLED_WEAK =
+  /\b(booked|sorted|confirmed|reserved|down for|got you in|popped you in)\b/i;
+
+const REFERS_TO_A_TIME =
+  /\b\d{1,2}(:\d{2})?\s?[ap]m\b|\b(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
+
+/**
+ * Does the reply tell the visitor their appointment is settled?
+ *
+ * Booking happens in code and the model is told afterwards, but nothing stops
+ * the model deciding the conversation has reached a booking and saying so. In a
+ * recorded run it did exactly that in 10 of 50 conversations, on turns where the
+ * slot store had confirmed nothing. Someone turns up to a clinic that has never
+ * heard of them, which is the worst thing this agent can do.
+ *
+ * Structural rather than phrase-based: a settled-sounding verb, a time or day,
+ * and not a question. An offer ends in a question mark; a confirmation does not.
+ */
+export function claimsBooked(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  // An offer ends in a question. A confirmation does not.
+  if (t.endsWith('?')) return false;
+  if (SETTLED_STRONG.test(t)) return true;
+  return SETTLED_WEAK.test(t) && REFERS_TO_A_TIME.test(t);
+}
+
 const OUTPUT_BANNED = [
   { re: SEXUAL, label: 'sexual' as const },
   { re: /\b(you'?re being|that'?s (not )?(appropriate|acceptable)|i must ask you|please refrain|i won'?t tolerate|that kind of language|inappropriate)\b/i, label: 'harassment' as const },
@@ -409,6 +457,10 @@ export function classifyOutput(
   const times = inventedTimes(text, availability, offered);
   if (times.length) labels.push('invented_slot');
 
+  // A confirmation is only true if the slot store actually confirmed it.
+  const falseConfirmation = claimsBooked(text) && !state.bookedSlotId;
+  if (falseConfirmation) labels.push('false_confirmation');
+
   return {
     labels: [...new Set(labels)],
     unsupportedClaims: unsupported,
@@ -426,6 +478,11 @@ export function describeOutputVerdict(v: OutputVerdict): string {
   }
   if (v.inventedTimes.length) {
     bits.push(`you offered ${v.inventedTimes.join(', ')}, which isn't in AVAILABILITY`);
+  }
+  if (v.labels.includes('false_confirmation')) {
+    bits.push(
+      'you told them they are booked, but nothing has been confirmed in the diary. Do not say booked, confirmed, all set, or see you then. Ask for whatever is still missing instead',
+    );
   }
   if (v.labels.includes('prompt_injection')) bits.push('you referred to your own instructions or vendor');
   if (v.labels.includes('harassment')) bits.push('you commented on how they were speaking, do not');

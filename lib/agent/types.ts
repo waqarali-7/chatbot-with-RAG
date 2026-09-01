@@ -89,7 +89,12 @@ export type GuardLabel =
   | 'prompt_injection'
   | 'off_topic';
 
-export type OutputGuardLabel = GuardLabel | 'unsupported_claim' | 'invented_slot';
+export type OutputGuardLabel =
+  | GuardLabel
+  | 'unsupported_claim'
+  | 'invented_slot'
+  /** Told the visitor they are booked when the slot store confirmed nothing. */
+  | 'false_confirmation';
 
 export interface InputVerdict {
   label: GuardLabel;

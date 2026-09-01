@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { runTurn, SESSION_TURN_CAP } from '@/lib/agent/loop';
+import { QuotaExhaustedError } from '@/lib/llm/retry';
 import {
   disclosureModeFromEnv,
   newConversationState,
@@ -100,7 +101,25 @@ export async function POST(req: NextRequest) {
         );
         await recordTrace(result.trace);
       } catch (err) {
-        controller.enqueue(sse({ type: 'error', message: String(err) }));
+        // Distinguish "we are out of credit" from "the code broke". A visitor
+        // shown a generic error will keep retrying into a wall, and an operator
+        // watching a demo has no idea which of the two just happened.
+        const quota = err instanceof QuotaExhaustedError;
+        if (quota) {
+          console.error(`[chat] provider quota exhausted: ${(err as QuotaExhaustedError).detail}`);
+        } else {
+          console.error('[chat] turn failed', err);
+        }
+        controller.enqueue(
+          sse({
+            type: 'error',
+            kind: quota ? 'quota' : 'unknown',
+            // Never surface provider internals to a visitor.
+            message: quota
+              ? "Sorry, the demo's hit its usage limit for now. Give the practice a ring on 020 7946 0812 and someone will pick it up."
+              : 'Something went wrong at our end. Try again in a moment.',
+          }),
+        );
       } finally {
         controller.close();
       }

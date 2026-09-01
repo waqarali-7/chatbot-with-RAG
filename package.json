@@ -21,7 +21,8 @@
     "eval:latency": "tsx evals/runner.ts latency",
     "eval:clock": "tsx evals/runner.ts clock",
     "eval:gate": "vitest run evals/gate.test.ts",
-    "check:supabase": "tsx scripts/check-supabase.ts"
+    "check:supabase": "tsx scripts/check-supabase.ts",
+    "eval:assemble": "tsx scripts/assemble-results.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",

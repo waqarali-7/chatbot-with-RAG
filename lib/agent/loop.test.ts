@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { claimsBooked, classifyOutput } from './guardrails';
 import { runTurn } from './loop';
+import { MockProvider } from '@/lib/llm/mock';
+import { setProviderOverride } from '@/lib/llm/registry';
+import type { CompletionResponse, LLMProvider, StreamChunk } from '@/lib/llm/provider';
 import { newConversationState, type ConversationState, type Turn } from './types';
 import { MemorySlotStore } from '@/lib/booking/memory-store';
 import { generateSlots } from '@/lib/booking/seed';
@@ -137,5 +141,125 @@ describe('turn loop, rejection handling', () => {
       'nothing that week works',
     ]);
     expect(said.join(' ')).toMatch(/short notice|cancellation list|waiting list|text you/i);
+  });
+});
+
+describe('turn loop, false confirmations', () => {
+  /**
+   * Observed in a real run with Claude: "You're booked, Sam, 11am tomorrow for a
+   * hygiene clean at Shoreditch" on a turn where the slot store had confirmed
+   * nothing, and again for a second persona. Booking happens in code, but the
+   * model can still decide the conversation has reached a booking and announce
+   * one. Someone turns up to an appointment that does not exist.
+   */
+  it('flags a confirmation the slot store never made', () => {
+    const state = newConversationState('fc', 'info_card', NOW);
+    const verdict = classifyOutput(
+      "You're booked, Sam, 11am tomorrow for a hygiene clean at Shoreditch.",
+      [],
+      [],
+      [],
+      state,
+      NOW,
+    );
+    expect(verdict.labels).toContain('false_confirmation');
+    expect(verdict.ok).toBe(false);
+  });
+
+  it.each([
+    "you're all set for tomorrow",
+    'Booked you in for 10am.',
+    "That's you down for Thursday.",
+    'All confirmed, see you then.',
+    'locked in, 10am tomorrow',
+  ])('flags %j', (text) => {
+    const state = newConversationState('fc', 'info_card', NOW);
+    expect(claimsBooked(text)).toBe(true);
+    expect(classifyOutput(text, [], [], [], state, NOW).labels).toContain('false_confirmation');
+  });
+
+  it('allows the same wording once the booking is real', () => {
+    const state = { ...newConversationState('fc', 'info_card', NOW), bookedSlotId: 'slot_1' };
+    const verdict = classifyOutput("You're booked for tomorrow at 10am.", [], [], [], state, NOW);
+    expect(verdict.labels).not.toContain('false_confirmation');
+  });
+
+  it('does not flag an ordinary offer', () => {
+    const state = newConversationState('fc', 'info_card', NOW);
+    const verdict = classifyOutput("I've got 10am or 11am tomorrow. Either work?", [], [], [], state, NOW);
+    expect(verdict.labels).not.toContain('false_confirmation');
+  });
+});
+
+/**
+ * Replays the exact words a recorded Claude run produced, with a stub provider,
+ * so the state machine is tested against real model phrasing rather than
+ * against phrasing invented to suit it. Every bug this file guards against was
+ * found this way, after the run that exposed them had already been paid for.
+ */
+describe('turn loop, replayed against recorded model output', () => {
+  class Replay implements LLMProvider {
+    readonly provider = 'mock' as const;
+    readonly id = 'replay';
+    private i = 0;
+    constructor(private lines: string[]) {}
+    async complete(): Promise<CompletionResponse> {
+      const text = this.lines[Math.min(this.i++, this.lines.length - 1)] ?? '';
+      return {
+        text,
+        provider: 'mock',
+        model: 'replay',
+        usage: { promptTokens: 0, completionTokens: 0 },
+        latencyMs: 1,
+        ttftMs: 1,
+        stopReason: 'end_turn',
+      };
+    }
+    async *stream(): AsyncIterable<StreamChunk> {
+      const response = await this.complete();
+      yield { type: 'delta', text: response.text };
+      yield { type: 'done', response };
+    }
+  }
+
+  const RECORDED: [string, string][] = [
+    [
+      'need a clean',
+      'I can get you in with one of our dentists to take a look, tomorrow at 10am in Docklands or 11am in Shoreditch, does either work?',
+    ],
+    ['k that one', "what's your name, so i can pop it in?"],
+    ['sam', 'Booked, Sam, tomorrow at 11am in Shoreditch with Dr Priya Nair.'],
+  ];
+
+  afterEach(() => {
+    setProviderOverride('agent', null);
+    setProviderOverride('guardrail', null);
+  });
+
+  it('completes the booking the live run failed to complete', async () => {
+    setProviderOverride('agent', new Replay(RECORDED.map(([, a]) => a)));
+    setProviderOverride('guardrail', MockProvider.forRole('guardrail'));
+
+    const store: SlotStore = new MemorySlotStore(() => NOW);
+    await store.reset(generateSlots(NOW));
+    let state = newConversationState('replay', 'info_card', NOW);
+    const history: Turn[] = [];
+    let regenerations = 0;
+
+    for (const [user] of RECORDED) {
+      const res = await runTurn({ message: user, state, history, store, now: NOW });
+      state = res.state;
+      regenerations += res.trace.regenerations;
+      history.push({ role: 'user', content: user, at: NOW });
+      for (const b of res.bubbles) history.push({ role: 'assistant', content: b.text, at: NOW });
+    }
+
+    expect(state.reason).toBe('hygiene');
+    expect(state.name).toBe('Sam');
+    expect(state.bookedSlotId).toBeTruthy();
+    // Every regeneration here was one of my own guardrails rejecting a valid
+    // reply. Three turns used to cost five.
+    expect(regenerations).toBe(0);
+    expect(await store.listBookings()).toHaveLength(1);
   });
 });

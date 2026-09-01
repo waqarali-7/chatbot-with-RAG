@@ -5,6 +5,17 @@ import { OpenAIProvider } from './openai';
 import type { LLMProvider } from './provider';
 
 const cache = new Map<string, LLMProvider>();
+const overrides = new Map<Role, LLMProvider>();
+
+/**
+ * Test seam. Lets a recorded transcript be replayed through the real turn loop
+ * so a booking failure can be attributed to the state machine rather than to
+ * what the model said, without paying for a run to find out.
+ */
+export function setProviderOverride(role: Role, provider: LLMProvider | null): void {
+  if (provider) overrides.set(role, provider);
+  else overrides.delete(role);
+}
 
 function construct(role: Role, provider: ProviderId): LLMProvider {
   const model = modelForRole(role, provider);
@@ -25,6 +36,8 @@ function construct(role: Role, provider: ProviderId): LLMProvider {
  * and the provider comparison run possible without touching code.
  */
 export function providerFor(role: Role, override?: ProviderId): LLMProvider {
+  const stub = overrides.get(role);
+  if (stub) return stub;
   const chosen = override ?? providerForRole(role);
   const key = `${role}:${chosen}`;
   let p = cache.get(key);

@@ -61,6 +61,19 @@ describe('deterministic tell scorer catches the style tells it claims to', () =>
     );
   });
 
+  it('does not flag a two-slot offer that names the sites', () => {
+    // Regression from a real run: this was rejected as stacked, so the offer
+    // never reached the visitor and the conversation could not reach a booking.
+    const offer =
+      'Got tomorrow at 10am in Docklands with Dr Okafor, or 11am in Shoreditch with Dr Nair, either work?';
+    expect(det(offer).violations).not.toContain('question_stacking');
+  });
+
+  it('still flags a genuine multi-part question', () => {
+    const stacked = 'Can I grab your name, and which site would you prefer, or would 10am work?';
+    expect(det(stacked).violations).toContain('question_stacking');
+  });
+
   it('flags a recap of the user message', () => {
     const user = 'I need to book a hygiene appointment for next Thursday morning please';
     const agent = 'So you need to book a hygiene appointment for next Thursday morning.';

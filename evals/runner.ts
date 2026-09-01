@@ -27,7 +27,23 @@ import { judgeTellTurn, TELL_FLAGS, type TellFlag, type TellVerdict } from './sc
 import { runRagEval } from './scorers/rag';
 import { runClockRateStudy } from './clock-rate';
 
-const RESULTS_DIR = path.join(process.cwd(), 'evals', 'results');
+/**
+ * Where results are written. Configurable because a free offline verification
+ * run writes the same filenames as a paid provider run, and writing them to the
+ * same place destroys the expensive one.
+ *
+ * That is not hypothetical: a mock run of the conversation stage overwrote a
+ * Claude run of it, and the only copy was the mock. Anything not using the
+ * configured providers is written to results/scratch by default.
+ */
+function resultsDir(): string {
+  const explicit = process.env.EVAL_RESULTS_DIR;
+  if (explicit) return path.isAbsolute(explicit) ? explicit : path.join(process.cwd(), explicit);
+  const base = path.join(process.cwd(), 'evals', 'results');
+  return isFullyOffline() ? path.join(base, 'scratch') : base;
+}
+
+const RESULTS_DIR = resultsDir();
 
 export interface Provenance {
   runAt: string;
@@ -459,6 +475,9 @@ export async function runLatencyEval(): Promise<LatencyResults> {
 async function main() {
   const cmd = process.argv[2] ?? 'all';
   fs.mkdirSync(RESULTS_DIR, { recursive: true });
+  if (RESULTS_DIR.includes('scratch')) {
+    console.log('offline run: writing to evals/results/scratch so a real run is not overwritten');
+  }
   const prov = provenance();
   console.log(`concurrency: ${evalConcurrency()} (set EVAL_CONCURRENCY to change)`);
   console.log(
