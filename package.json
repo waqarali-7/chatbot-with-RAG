@@ -1,0 +1,45 @@
+{
+  "name": "inbound-lead-agent",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@8.15.6",
+  "scripts": {
+    "dev": "next dev",
+    "build": "pnpm eval:gate && next build",
+    "build:only": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "ingest": "tsx scripts/ingest.ts",
+    "seed": "tsx scripts/seed-slots.ts",
+    "test": "vitest run",
+    "eval": "tsx evals/runner.ts all",
+    "eval:rag": "tsx evals/runner.ts rag",
+    "eval:tell": "tsx evals/runner.ts tell",
+    "eval:conv": "tsx evals/runner.ts conversations",
+    "eval:disclosure": "tsx evals/runner.ts disclosure",
+    "eval:providers": "tsx evals/runner.ts providers",
+    "eval:latency": "tsx evals/runner.ts latency",
+    "eval:clock": "tsx evals/runner.ts clock",
+    "eval:gate": "vitest run evals/gate.test.ts",
+    "check:supabase": "tsx scripts/check-supabase.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "^15.1.0",
+    "openai": "^4.73.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.1",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.1",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

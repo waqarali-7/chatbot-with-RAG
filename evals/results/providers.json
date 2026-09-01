@@ -1,0 +1,55 @@
+{
+  "provenance": {
+    "runAt": "2026-08-31T10:26:24.664Z",
+    "routing": {
+      "agent": {
+        "provider": "mock",
+        "model": "mock-receptionist-v1"
+      },
+      "guardrail": {
+        "provider": "mock",
+        "model": "mock-classifier-v1"
+      },
+      "judge": {
+        "provider": "mock",
+        "model": "mock-judge-v1"
+      },
+      "embedding": {
+        "provider": "mock",
+        "model": "mock-hash-embed-256-v1"
+      }
+    },
+    "retrieval": {
+      "model": "bm25-k1.2-b0.75-v1",
+      "backend": "local-lexical",
+      "floor": 0.37
+    },
+    "offline": true,
+    "judgeCrossFamily": false,
+    "caveat": "This run was produced with no provider credentials: the agent is the deterministic offline stand-in, not a model; the judge is heuristic, not a model; retrieval is BM25, not dense embeddings. It demonstrates the harness and gates regressions. It is not a graded run of the production stack."
+  },
+  "rows": [
+    {
+      "provider": "anthropic",
+      "model": "mock-receptionist-v1",
+      "available": false,
+      "goalCompletion": null,
+      "bookingCompletion": null,
+      "styleViolationRate": null,
+      "guardrailViolations": null,
+      "inventedSlots": null,
+      "note": "no ANTHROPIC_API_KEY set, not run"
+    },
+    {
+      "provider": "openai",
+      "model": "mock-receptionist-v1",
+      "available": false,
+      "goalCompletion": null,
+      "bookingCompletion": null,
+      "styleViolationRate": null,
+      "guardrailViolations": null,
+      "inventedSlots": null,
+      "note": "no OPENAI_API_KEY set, not run"
+    }
+  ]
+}

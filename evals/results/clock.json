@@ -1,0 +1,14 @@
+{
+  "excerpts": 40,
+  "agentExcerpts": 20,
+  "humanExcerpts": 20,
+  "labellers": [],
+  "labelsCollected": 0,
+  "labelsExpected": 120,
+  "status": "awaiting_labels",
+  "clockRate": null,
+  "perLabeller": [],
+  "confusion": null,
+  "agreement": null,
+  "note": "This study needs three human labellers who have not seen the system. 0 of 120 labels are recorded across 0 labellers. Run `pnpm tsx scripts/clock-study.ts` to print the blinded excerpts, then append one JSON line per judgement to evals/datasets/clock-labels.jsonl. No rate is reported until then, and none is estimated."
+}

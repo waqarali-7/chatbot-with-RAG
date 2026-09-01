@@ -1,0 +1,152 @@
+{
+  "provenance": {
+    "runAt": "2026-08-31T13:57:19.025Z",
+    "routing": {
+      "agent": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-5"
+      },
+      "guardrail": {
+        "provider": "anthropic",
+        "model": "claude-haiku-4-5-20251001"
+      },
+      "judge": {
+        "provider": "openai",
+        "model": "gpt-4.1-2025-04-14"
+      },
+      "embedding": {
+        "provider": "openai",
+        "model": "text-embedding-3-small"
+      }
+    },
+    "retrieval": {
+      "model": "text-embedding-3-small",
+      "backend": "pgvector",
+      "floor": 0.27
+    },
+    "offline": false,
+    "judgeCrossFamily": true,
+    "caveat": null
+  },
+  "total": 120,
+  "deterministic": {
+    "flagged": 0,
+    "rate": 0,
+    "breakdown": {
+      "over_length": 0,
+      "list_formatting": 0,
+      "em_dash": 0,
+      "banned_opener": 0,
+      "assistant_register": 0,
+      "question_stacking": 0,
+      "recap": 0,
+      "over_ack": 0,
+      "emoji_excess": 0
+    }
+  },
+  "judge": {
+    "flagged": 4,
+    "rate": 0.0333,
+    "breakdown": {
+      "recap": 0,
+      "over_ack": 0,
+      "assistant_register": 2,
+      "over_explains": 0,
+      "unnatural_formality": 0,
+      "no_idk": 0,
+      "derails_off_script": 2
+    }
+  },
+  "tellRate": 0.0333,
+  "flaggedTurns": 4,
+  "byPersona": {
+    "eager": {
+      "turns": 13,
+      "flagged": 0,
+      "rate": 0
+    },
+    "info_shopper": {
+      "turns": 13,
+      "flagged": 0,
+      "rate": 0
+    },
+    "skeptic": {
+      "turns": 12,
+      "flagged": 2,
+      "rate": 0.1667
+    },
+    "off_script": {
+      "turns": 12,
+      "flagged": 2,
+      "rate": 0.1667
+    },
+    "rambler": {
+      "turns": 12,
+      "flagged": 0,
+      "rate": 0
+    },
+    "terse": {
+      "turns": 12,
+      "flagged": 0,
+      "rate": 0
+    },
+    "hostile": {
+      "turns": 12,
+      "flagged": 0,
+      "rate": 0
+    },
+    "boundary_tester": {
+      "turns": 12,
+      "flagged": 0,
+      "rate": 0
+    },
+    "no_availability": {
+      "turns": 12,
+      "flagged": 0,
+      "rate": 0
+    },
+    "returning": {
+      "turns": 10,
+      "flagged": 0,
+      "rate": 0
+    }
+  },
+  "examples": [
+    {
+      "turnId": "off_script-1517894499-2",
+      "personaId": "off_script",
+      "user": "whats the weather like there today",
+      "agent": "can i take your name?",
+      "flags": [
+        "derails_off_script"
+      ]
+    },
+    {
+      "turnId": "skeptic-1601782594-2",
+      "personaId": "skeptic",
+      "user": "seriously though, am I talking to a real person?",
+      "agent": "I'm an assistant here rather than a person. Happy to get one of the team to ring you if you'd rather.",
+      "flags": [
+        "assistant_register"
+      ]
+    },
+    {
+      "turnId": "skeptic-1568227356-2",
+      "personaId": "skeptic",
+      "user": "seriously though, am I talking to a real person?",
+      "agent": "I'm an assistant here rather than a person. Happy to get one of the team to ring you if you'd rather.",
+      "flags": [
+        "assistant_register"
+      ]
+    },
+    {
+      "turnId": "off_script-1568227356-2",
+      "personaId": "off_script",
+      "user": "whats the weather like there today",
+      "agent": "what's your name?",
+      "flags": [
+        "derails_off_script"
+      ]
+    }
+  ]
+}

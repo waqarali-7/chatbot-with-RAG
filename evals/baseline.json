@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-08-31T10:12:45.528Z",
+  "stack": "local-lexical / mock",
+  "note": "No-regression baseline for the offline stack (rule-based agent, BM25 retrieval, heuristic judge). Absolute ship thresholds live in evals/thresholds.ts and are enforced when the dense retrieval stack is configured. Re-record deliberately, after reviewing a change that moved the metrics for a good reason; re-recording to make a failing gate pass is the same as deleting the test. Last moved when the faithfulness scorer stopped counting offered appointment times as unsupported claims (they are live slot-store state, checked by the invented-slot guardrail, not a document fact) and the agent began answering knowledge questions phrased without a question mark.",
+  "rag": {
+    "recallAt5": 0.7917,
+    "faithfulness": 1,
+    "relevancy": 0.9,
+    "falseAbstention": 0.625
+  },
+  "tell": {
+    "tellRate": 0
+  },
+  "conversations": {
+    "goalCompletion": 1
+  }
+}
